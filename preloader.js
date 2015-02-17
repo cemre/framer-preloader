@@ -8,7 +8,7 @@
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         layer = _ref[_i];
         if (layer.image) {
-          this.imagesToLoad.push(layer.image);
+          this.imagesToLoad.push(layer);
         }
       }
       this.imagesTotalCount = this.imagesToLoad.length;
@@ -57,14 +57,53 @@
         backgroundColor: 'white'
       });
       this.loadingBar.superLayer = this.loadingLayer;
-      Utils.delay(0.1, (function(_this) {
+      this.tempLayer = new Layer({
+        x: 0,
+        y: 0,
+        width: 750,
+        height: 1334,
+        backgroundColor: 'transparent'
+      });
+      this.tempLayer.superLayer = this.loadingLayer;
+      this.tempLayer.sendToBack();
+      Utils.delay(0.5, (function(_this) {
         return function() {
-          return _this.imagesToLoad.forEach(function(image) {
+          return _this.imagesToLoad.forEach(function(layer, k) {
             var loader;
+            layer.original = {
+              superLayer: layer.superLayer,
+              frame: layer.frame,
+              opacity: layer.opacity,
+              visible: layer.visible,
+              index: layer.index,
+              scale: layer.scale
+            };
+            layer.superLayer = _this.tempLayer;
+            layer.scale = 1 / Math.max(layer.height / 1334, 1);
+            layer.center();
+            layer.opacity = 0.1;
+            layer.visible = true;
             loader = new Image();
-            loader.name = image;
-            loader.src = image;
-            return loader.onload = function() {
+            loader.name = layer.image;
+            loader.src = layer.image;
+            loader.onload = function() {
+              layer.superLayer = layer.original.superLayer;
+              layer.frame = layer.original.frame;
+              layer.opacity = layer.original.opacity;
+              layer.visible = layer.original.visible;
+              layer.index = layer.original.index;
+              layer.scale = layer.original.scale;
+              console.log("Preloader: OK " + layer.image);
+              return _this.imagesLoadedCount++;
+            };
+            return loader.onerror = function() {
+              layer.superLayer = layer.original.superLayer;
+              layer.frame = layer.original.frame;
+              layer.opacity = layer.original.opacity;
+              layer.visible = layer.original.visible;
+              layer.index = layer.original.index;
+              layer.scale = layer.original.scale;
+              console.log("Preloader: Err " + layer.image);
               return _this.imagesLoadedCount++;
             };
           });

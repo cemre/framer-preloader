@@ -4,7 +4,7 @@ class Framer.Preloader
 
 		for layer in Framer.CurrentContext._layerList
 			if layer.image
-				@imagesToLoad.push(layer.image)
+				@imagesToLoad.push(layer)
 
 		@imagesTotalCount = @imagesToLoad.length
 		@imagesLoadedCount = 0	
@@ -35,14 +35,55 @@ class Framer.Preloader
 		@loadingBar.superLayer = @loadingLayer
 		
 
+		@tempLayer = new Layer x: 0, y: 0, width: 750, height: 1334, backgroundColor: 'transparent'
+		@tempLayer.superLayer = @loadingLayer
+		@tempLayer.sendToBack()
 		# Wait a little, otherwise we hold up the page and nothing shows as the images load.
-		Utils.delay 0.1, =>
-			@imagesToLoad.forEach (image) =>
+		Utils.delay 0.5, =>
+			@imagesToLoad.forEach (layer, k) =>
+
+				# Remember its original place
+				layer.original =
+					superLayer: layer.superLayer
+					frame: layer.frame
+					opacity: layer.opacity
+					visible: layer.visible
+					index: layer.index
+					scale: layer.scale
+
+				# Show it on screen
+				layer.superLayer = @tempLayer
+				layer.scale = 1 / Math.max(layer.height/1334, 1)
+				layer.center()
+				layer.opacity = 0.1
+				layer.visible = true
+				
 				loader = new Image()
-				loader.name = image
-				loader.src = image
+				loader.name = layer.image
+				loader.src =  layer.image
+
 				loader.onload = =>
+					layer.superLayer = layer.original.superLayer
+					layer.frame = layer.original.frame
+					layer.opacity = layer.original.opacity
+					layer.visible = layer.original.visible
+					layer.index = layer.original.index
+					layer.scale = layer.original.scale
+					console.log("Preloader: OK " + layer.image)
 					@imagesLoadedCount++
+
+				# TODO: Refactor
+				loader.onerror = =>
+					layer.superLayer = layer.original.superLayer
+					layer.frame = layer.original.frame
+					layer.opacity = layer.original.opacity
+					layer.visible = layer.original.visible
+					layer.index = layer.original.index
+					layer.scale = layer.original.scale
+					console.log("Preloader: Err " + layer.image)
+					@imagesLoadedCount++
+
+
 					
 		@loadingInterval = setInterval =>
 			if @imagesLoadedCount >= @imagesTotalCount
